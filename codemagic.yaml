@@ -1,0 +1,51 @@
+workflows:
+  android-apk:
+    name: Dafter Yawmi Android APK
+    max_build_duration: 30
+    environment:
+      flutter: stable
+    scripts:
+      - name: Generate Android platform files
+        script: |
+          flutter create --platforms=android --project-name=dafter_yawmi .
+      - name: Set Android compile SDK to 36
+        script: |
+          python3 - <<'PYCODE'
+          from pathlib import Path
+
+          files = [
+              Path('android/app/build.gradle.kts'),
+              Path('android/app/build.gradle'),
+          ]
+
+          found = False
+          for p in files:
+              if not p.exists():
+                  continue
+              s = p.read_text()
+              original = s
+              s = s.replace('compileSdk = flutter.compileSdkVersion', 'compileSdk = 36')
+              s = s.replace('compileSdk flutter.compileSdkVersion', 'compileSdk 36')
+              s = s.replace('compileSdkVersion flutter.compileSdkVersion', 'compileSdkVersion 36')
+              if s != original:
+                  p.write_text(s)
+              found = True
+
+          if not found:
+              raise SystemExit('Could not find Android app Gradle file')
+
+          print('Android app compileSdk set to 36')
+          PYCODE
+
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+      - name: Generate app launcher icon
+        script: |
+          dart run flutter_launcher_icons
+
+      - name: Build release APK
+        script: |
+          flutter build apk --release
+    artifacts:
+      - build/app/outputs/flutter-apk/app-release.apk
